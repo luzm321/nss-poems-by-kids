@@ -66,13 +66,32 @@ WHERE g.Name = '3rd Grade';
 
 --How many total authors are in the first through third grades?
 SELECT
-	SUM(a.GradeId) [Total Number of Authors From 1st-3rd Grades]
+	COUNT(a.GradeId) [Total Number of Authors From 1st-3rd Grades]
 FROM Author a
 LEFT JOIN Grade g
 ON a.GradeId = g.Id
 WHERE g.Name BETWEEN '1st Grade' AND '3rd Grade';
 --WHERE g.Name NOT LIKE '4%' OR '5%';
 --WHERE g.Name IN (LIKE '%1st%' OR '%2nd%' OR '%3rd%');
+--OR CAN QUERY THIS WAY:
+SELECT
+	COUNT(DISTINCT a.Id) [Total Number of Authors From 1st-3rd Grades]
+FROM Author a
+LEFT JOIN Grade g
+ON a.GradeId = g.Id
+WHERE
+	g.Id = 1
+OR
+	g.Id = 2
+OR
+	g.Id = 3;
+--THIS QUERY GIVES TOTAL SUM OF AUTHORS in 1st - 3rd Grades:
+SELECT
+	SUM(a.GradeId) [Total Number of Authors From 1st-3rd Grades]
+FROM Author a
+LEFT JOIN Grade g
+ON a.GradeId = g.Id
+WHERE g.Name BETWEEN '1st Grade' AND '3rd Grade';
 
 --What is the total number of poems written by fourth graders?
 SELECT
@@ -116,24 +135,137 @@ SELECT
 FROM Poem p
 GROUP BY p.Title
 HAVING MAX(p.WordCount) = 263;
+--OR CAN QUERY THIS WAY:
+SELECT 
+	TOP(1) Title [Poem Title With Most Words],
+	WordCount [Most Word Count]
+FROM Poem 
+ORDER BY WordCount DESC;
 
 --Which author(s) have the most poems? (Remember authors can have the same name.)
 SELECT 
-	DISTINCT a.Name [Author Name],
-	MAX(p.AuthorId) [Number of Poems]
+	a.Name [Author Name], 
+	COUNT(p.AuthorId) [Most Number of Poems Count]
 FROM Poem p
 LEFT JOIN Author a
 ON p.AuthorId = a.Id
-GROUP By a.Name
+GROUP BY a.Name
+HAVING COUNT(p.AuthorId)> 300
 ORDER BY a.Name;
---STILL NEED TO COMPLETE QUERY ABOVE FOR AUTHOR(S) WITH THE MOST POEMS
+--SELECT 
+--	DISTINCT a.Name [Author Name],
+--	COUNT(p.AuthorId) [Most Number of Poems]
+--FROM Poem p
+--LEFT JOIN Author a
+--ON p.AuthorId = a.Id
+--WHERE p.AuthorId = 8725
+--GROUP BY a.Name
+--ORDER BY a.Name;
+
+--OR CAN QUERY THIS WAY:
+SELECT TOP(1) 
+	a.Name [Author Name], 
+	COUNT(p.Id) [Most Number of Poems Count]
+FROM Author a
+INNER JOIN Poem p
+	ON a.Id = p.AuthorId
+GROUP BY a.Name
+ORDER BY COUNT(p.Id) DESC;
 
 --How many poems have an emotion of sadness?
+SELECT
+	e.Name [Emotion Name],
+	COUNT(pe.PoemId) [Poem Count]
+FROM PoemEmotion pe
+INNER JOIN Emotion e
+ON pe.EmotionId = e.Id
+WHERE e.Id = 3
+--WHERE e.Name = 'Sadness';
+GROUP BY e.Name;
+
+--OR CAN QUERY THIS WAY:
+SELECT 
+	e.Name [Emotion Name],
+	COUNT(p.Id) [Poem Count]
+FROM PoemEmotion pe
+INNER JOIN Poem p
+ON pe.PoemId = p.Id
+INNER JOIN Emotion e
+ON pe.EmotionId = e.Id
+WHERE e.Name = 'Sadness'
+GROUP BY e.Name;
+
 
 --How many poems are not associated with any emotion?
+SELECT 
+	COUNT(p.Id) [Poem Count]
+FROM Poem p
+LEFT JOIN PoemEmotion pe
+ON p.Id = pe.PoemId 
+WHERE pe.EmotionId IS NULL;
+
+--OR CAN QUERY THIS WAY WITH RIGHT JOIN DEPENDING OF ORDER OF TABLES:
+SELECT 
+	COUNT(p.Id) [Poem Count]
+FROM PoemEmotion pe
+RIGHT JOIN Poem p
+ON pe.PoemId = p.Id
+WHERE pe.EmotionId IS NULL;
 
 --Which emotion is associated with the least number of poems?
+SELECT 
+	TOP(1) e.Name [Emotion Name], 
+	COUNT(p.Id) [Poem Count]
+FROM PoemEmotion pe
+INNER JOIN Poem p
+ON pe.PoemId = p.Id
+INNER JOIN Emotion e
+ON pe.EmotionId = e.Id
+GROUP BY e.Name
+ORDER BY COUNT(p.Id) DESC;
+--CAN ALSO USE MIN() IN QUERY TO ACHIEVE SAME RESULT
 
 --Which grade has the largest number of poems with an emotion of joy?
 
+SELECT
+	TOP(1) g.Name [Grade], 
+	e.Name [Emotion Name], 
+	COUNT(p.Id) [Poem Count]
+FROM Poem p
+INNER JOIN PoemEmotion pe
+ON p.Id = pe.PoemId
+INNER JOIN Emotion e
+ON pe.EmotionId = e.Id
+INNER JOIN Author a
+ON p.AuthorId = a.Id
+INNER JOIN Grade g 
+ON a.GradeId = g.Id
+WHERE e.Name = 'Joy'
+GROUP BY 
+	g.Name, 
+	e.Name
+ORDER BY COUNT(p.Id) DESC;
+
 --Which gender has the least number of poems with an emotion of fear?
+
+SELECT 
+	TOP(1) ge.Name [Gender], 
+	e.Name [Emotion Name], 
+	COUNT(p.Id) [Poem Count]
+FROM Poem p
+INNER JOIN PoemEmotion pe
+ON p.Id = pe.PoemId
+INNER JOIN Emotion e
+ON pe.EmotionId = e.Id
+INNER JOIN Author a
+ON p.AuthorId = a.Id
+INNER JOIN Gender ge 
+ON a.GenderId = ge.Id
+WHERE e.Name = 'Fear'
+GROUP BY 
+	ge.Name, 
+	e.Name
+ORDER BY COUNT(p.Id) ASC;
+--ORDER BY CLAUSE IS BY DEFAULT ASCENDING, JUST ADDING ASC TO BE SPECIFIC, DESC WILL QUERY
+--RESULTS WHERE FEMALE GENDER WITH HIGHEST NUMBER OF POEMS WITH AN EMOTION OF FEAR INSTEAD
+--OF DISPLAYING AMBIGUOUS GENDER WITH LEAST NUMBER OF POEMS WITH AN EMOTION OF FEAR
